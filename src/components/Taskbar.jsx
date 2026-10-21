@@ -17,8 +17,6 @@ const QUICK_LAUNCH = [
 const WEATHER_TEXT = "22°C Clear";
 const USER_NAME = "Tahaviw";
 
-/** "Wed 11:34 AM" */
-
 function formatClock(date) {
   const day = date.toLocaleDateString(undefined, { weekday: "short" });
 
@@ -31,8 +29,6 @@ function formatClock(date) {
 }
 
 function Taskbar({ onOpenApp }) {
-  // Lazy initializer so the level is picked once on mount, not on every render.
-
   const [battery] = useState(() => Math.floor(Math.random() * 21) + 80);
 
   const [time, setTime] = useState(() => formatClock(new Date()));

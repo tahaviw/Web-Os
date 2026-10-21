@@ -19,9 +19,11 @@ function clamp(value, min, max) {
 function Window({
   title,
   width = 460,
+  height,
   initialX,
   initialY,
   zIndex = 100,
+  bodyClassName = "",
   onFocus,
   onClose,
   children,
@@ -105,7 +107,12 @@ function Window({
   return (
     <section
       className={`window${isDragging ? " window--dragging" : ""}`}
-      style={{ width, zIndex, transform: `translate3d(${position.x}px, ${position.y}px, 0)` }}
+      style={{
+        width,
+        height,
+        zIndex,
+        transform: `translate3d(${position.x}px, ${position.y}px, 0)`,
+      }}
       onMouseDown={onFocus}
       aria-label={title}
     >
@@ -128,7 +135,9 @@ function Window({
         </button>
       </header>
 
-      <div className="windowbody">{children}</div>
+      <div className={`windowbody${bodyClassName ? ` ${bodyClassName}` : ""}`}>
+        {children}
+      </div>
     </section>
   );
 }

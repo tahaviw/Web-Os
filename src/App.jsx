@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import Taskbar from "./components/Taskbar";
 import Window from "./components/Window";
+import NoteApp from "./components/apps/NoteApp";
 
 /** Catalogue of launchable apps. `content` is whatever the window body renders. */
 const APPS = {
@@ -22,7 +23,13 @@ const APPS = {
       </>
     ),
   },
-  note: { title: "Note", width: 420, content: <p>Note app goes here.</p> },
+  note: {
+    title: "Note",
+    width: 760,
+    height: 480,
+    bodyClassName: "windowbody--flush",
+    content: <NoteApp />,
+  },
   terminal: {
     title: "Terminal",
     width: 560,
@@ -77,6 +84,8 @@ function App() {
             key={appId}
             title={app.title}
             width={app.width}
+            height={app.height}
+            bodyClassName={app.bodyClassName}
             zIndex={zIndex}
             onFocus={() => bringToFront(appId)}
             onClose={() => closeWindow(appId)}
