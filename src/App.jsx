@@ -2,8 +2,9 @@ import { useCallback, useRef, useState } from "react";
 import Taskbar from "./components/Taskbar";
 import Window from "./components/Window";
 import NoteApp from "./components/apps/NoteApp";
+import BrowserApp from "./components/apps/BrowserApp";
+import browserIcon from "./assets/Icons/browser-icon.png";
 
-/** Catalogue of launchable apps. `content` is whatever the window body renders. */
 const APPS = {
   welcome: {
     title: "Welcome to TahaviwOS",
@@ -37,10 +38,20 @@ const APPS = {
   },
   browser: {
     title: "Browser",
-    width: 720,
-    content: <p>Browser goes here.</p>,
+    width: 880,
+    height: 580,
+    bodyClassName: "windowbody--flush",
+    content: <BrowserApp />,
   },
 };
+
+/**
+ * Icons pinned to the desktop itself, stacked down the left edge.
+ * `id` must be a key of APPS so the shortcut can only ever open a real app.
+ */
+const DESKTOP_SHORTCUTS = [
+  { id: "browser", label: "Browser", icon: browserIcon },
+];
 
 function App() {
   // appId -> z-index. Presence in this object is what "is open" means.
@@ -94,6 +105,26 @@ function App() {
           </Window>
         );
       })}
+
+      <div className="desktop-shortcuts">
+        {DESKTOP_SHORTCUTS.filter((s) => APPS[s.id]).map((shortcut) => (
+          <button
+            key={shortcut.id}
+            type="button"
+            className="desktop-shortcut"
+            onClick={() => openWindow(shortcut.id)}
+            title={`Open ${shortcut.label}`}
+          >
+            <img
+              className="desktop-shortcut-icon"
+              src={shortcut.icon}
+              alt=""
+              draggable={false}
+            />
+            <span className="desktop-shortcut-label">{shortcut.label}</span>
+          </button>
+        ))}
+      </div>
 
       <Taskbar onOpenApp={openWindow} />
     </div>

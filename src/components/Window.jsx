@@ -29,12 +29,17 @@ function Window({
   children,
 }) {
   const [isDragging, setIsDragging] = useState(false);
-  const [position, setPosition] = useState(() => ({
-    // Default to horizontally centred, a little below the top edge.
-    x: initialX ?? Math.max(MIN_VISIBLE, (window.innerWidth - width) / 2),
-    y: initialY ?? Math.round(window.innerHeight * 0.15),
-  }));
+  // `null` means "not positioned yet" — the window is centred by CSS instead
+  // of by guessing pixel coordinates. The real height isn't known on the first
+  // render (the `height` prop is optional), so any computed value would be a
+  // guess that drifts with the content and the viewport.
+  const [position, setPosition] = useState(() =>
+    initialX === undefined && initialY === undefined
+      ? null
+      : { x: initialX ?? 0, y: initialY ?? 0 },
+  );
 
+  const sectionRef = useRef(null);
   const headerRef = useRef(null);
   /** Cursor position relative to the window origin, captured on mousedown. */
   const grabOffsetRef = useRef({ x: 0, y: 0 });
@@ -64,11 +69,17 @@ function Window({
 
       onFocus?.();
 
+      // Read the real on-screen rect rather than trusting `position`: the
+      // window may still be CSS-centred (position === null), and this keeps
+      // the handoff seamless either way.
+      const rect = sectionRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
       // Subtract this offset on every move so the window doesn't jump so its
       // top-left corner snaps under the cursor.
       grabOffsetRef.current = {
-        x: event.clientX - position.x,
-        y: event.clientY - position.y,
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top,
       };
 
       const headerHeight = headerRef.current?.offsetHeight ?? 40;
@@ -86,7 +97,7 @@ function Window({
         // Bail out if nothing changed, so dragging along one axis doesn't
         // schedule extra renders.
         setPosition((current) =>
-          current.x === nextX && current.y === nextY
+          current && current.x === nextX && current.y === nextY
             ? current
             : { x: nextX, y: nextY },
         );
@@ -101,17 +112,22 @@ function Window({
       document.body.classList.add("window-dragging");
       setIsDragging(true);
     },
-    [onFocus, position.x, position.y, stopDrag, width],
+    [onFocus, stopDrag, width],
   );
 
   return (
     <section
-      className={`window${isDragging ? " window--dragging" : ""}`}
+      ref={sectionRef}
+      className={`window${position === null ? " window--centered" : ""}${
+        isDragging ? " window--dragging" : ""
+      }`}
       style={{
         width,
         height,
         zIndex,
-        transform: `translate3d(${position.x}px, ${position.y}px, 0)`,
+        ...(position
+          ? { transform: `translate3d(${position.x}px, ${position.y}px, 0)` }
+          : null),
       }}
       onMouseDown={onFocus}
       aria-label={title}
