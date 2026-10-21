@@ -64,7 +64,7 @@ body,
 
 body {
   background-color: #1b2733; /* fallback while the image loads */
-  background-image: url("./assets/WallPaper-1.jpg");
+  background-image: url("./assets/WallPaper/WallPaper-1.jpg");
   background-repeat: no-repeat;
   background-position: center;
   background-size: cover;
@@ -143,4 +143,158 @@ body {
   margin-bottom: 12px;
   font-size: 21px;
   font-weight: 700;
+}
+
+/* ==========================================================================
+   Taskbar
+   ========================================================================== */
+
+.taskbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  height: 48px;
+  padding: 0 12px;
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border-top: 1px solid rgba(255, 255, 255, 0.65);
+  border-radius: 14px 14px 0 0;
+  box-shadow: 0 -8px 28px rgba(30, 60, 110, 0.16);
+  color: #24405f;
+}
+
+.taskbar-left,
+.taskbar-tray,
+.taskbar-apps,
+.taskbar-chip {
+  display: flex;
+  align-items: center;
+}
+
+.taskbar-left {
+  gap: 8px;
+  min-width: 0;
+}
+
+.taskbar-apps {
+  gap: 4px;
+}
+
+.taskbar-divider {
+  width: 1px;
+  height: 22px;
+  background: rgba(36, 64, 95, 0.2);
+}
+
+/* --- Buttons ------------------------------------------------------------- */
+
+.taskbar-start,
+.taskbar-app,
+.taskbar-user {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.taskbar-start {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+}
+
+.taskbar-start:hover,
+.taskbar-app:hover {
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.taskbar-app {
+  width: 38px;
+  height: 36px;
+  border-radius: 10px;
+}
+
+.taskbar-app img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  transition: transform 0.15s ease;
+}
+
+.taskbar-app:hover img {
+  transform: scale(1.14);
+}
+
+.taskbar-start img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+/* --- System tray --------------------------------------------------------- */
+
+.taskbar-tray {
+  gap: 6px;
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+.taskbar-chip {
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.126);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.taskbar-chip img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.taskbar-clock {
+  padding: 5px 10px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.taskbar-user {
+  gap: 8px;
+  padding: 4px 10px 4px 4px;
+  border-radius: 999px;
+  font-size: 13px;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+
+.taskbar-user:hover {
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.taskbar-user img {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: contain;
+}
+
+/* Keep the taskbar from covering windows docked to the bottom edge. */
+@media (max-width: 720px) {
+  .taskbar-chip span,
+  .taskbar-user span {
+    display: none;
+  }
 }

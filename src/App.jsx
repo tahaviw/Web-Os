@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Taskbar from "./components/Taskbar";
 
 function WelcomeWindow({ onClose }) {
   return (
@@ -11,7 +12,7 @@ function WelcomeWindow({ onClose }) {
           onClick={onClose}
           aria-label="Close welcome window"
         >
-          ×
+          X
         </button>
       </div>
 
@@ -29,12 +30,16 @@ function WelcomeWindow({ onClose }) {
 
 function App() {
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(true);
+  function handleOpenApp(appId) {
+    console.log("Launching app:", appId);
+  }
 
   return (
     <div className="desktop">
       {isWelcomeOpen && (
         <WelcomeWindow onClose={() => setIsWelcomeOpen(false)} />
       )}
+      <Taskbar onOpenApp={handleOpenApp} />
     </div>
   );
 }
