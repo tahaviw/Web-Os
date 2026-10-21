@@ -1,45 +1,92 @@
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import Taskbar from "./components/Taskbar";
+import Window from "./components/Window";
 
-function WelcomeWindow({ onClose }) {
-  return (
-    <div className="welcome-window">
-      <div className="welcome-header">
-        <span className="welcome-title">Welcome to TahaviwOS</span>
-        <button
-          type="button"
-          className="welcome-close"
-          onClick={onClose}
-          aria-label="Close welcome window"
-        >
-          X
-        </button>
-      </div>
-
-      <div className="welcome-body">
+/** Catalogue of launchable apps. `content` is whatever the window body renders. */
+const APPS = {
+  welcome: {
+    title: "Welcome to TahaviwOS",
+    width: 460,
+    content: (
+      <>
         <h1 className="welcome-greeting">Hello there</h1>
         <p className="welcome-text">
           This is a desktop environment that runs entirely in your browser.
           Everything you see the wallpaper, the windows, the taskbar is built
           with React.
         </p>
-      </div>
-    </div>
-  );
-}
+        <p className="welcome-text">
+          Drag any window by its title bar to move it around, and close it with
+          the red dot in the corner.
+        </p>
+      </>
+    ),
+  },
+  note: { title: "Note", width: 420, content: <p>Note app goes here.</p> },
+  terminal: {
+    title: "Terminal",
+    width: 560,
+    content: <p>Terminal goes here.</p>,
+  },
+  browser: {
+    title: "Browser",
+    width: 720,
+    content: <p>Browser goes here.</p>,
+  },
+};
 
 function App() {
-  const [isWelcomeOpen, setIsWelcomeOpen] = useState(true);
-  function handleOpenApp(appId) {
-    console.log("Launching app:", appId);
-  }
+  // appId -> z-index. Presence in this object is what "is open" means.
+  // z-index is only used for stacking, so it can live entirely in a ref —
+  // no need to make it state and re-render the whole tree on every focus.
+  const [openWindows, setOpenWindows] = useState({ welcome: 100 });
+  const zCounterRef = useRef(100);
+
+  const bringToFront = useCallback((appId) => {
+    zCounterRef.current += 1;
+    const z = zCounterRef.current;
+    setOpenWindows((current) =>
+      current[appId] === z ? current : { ...current, [appId]: z },
+    );
+  }, []);
+
+  // Opens the app, or just re-focuses it if it is already open.
+  const openWindow = useCallback(
+    (appId) => {
+      if (!APPS[appId]) return;
+      bringToFront(appId);
+    },
+    [bringToFront],
+  );
+
+  const closeWindow = useCallback((appId) => {
+    setOpenWindows((current) => {
+      if (current[appId] === undefined) return current;
+      const next = { ...current };
+      delete next[appId];
+      return next;
+    });
+  }, []);
 
   return (
     <div className="desktop">
-      {isWelcomeOpen && (
-        <WelcomeWindow onClose={() => setIsWelcomeOpen(false)} />
-      )}
-      <Taskbar onOpenApp={handleOpenApp} />
+      {Object.entries(openWindows).map(([appId, zIndex]) => {
+        const app = APPS[appId];
+        return (
+          <Window
+            key={appId}
+            title={app.title}
+            width={app.width}
+            zIndex={zIndex}
+            onFocus={() => bringToFront(appId)}
+            onClose={() => closeWindow(appId)}
+          >
+            {app.content}
+          </Window>
+        );
+      })}
+
+      <Taskbar onOpenApp={openWindow} />
     </div>
   );
 }

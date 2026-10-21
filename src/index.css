@@ -78,25 +78,27 @@ body {
 }
 
 /* ==========================================================================
-   Welcome window
+   Window shell
    ========================================================================== */
 
-.welcome-window {
+.window {
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: min(92vw, 460px);
-  border-radius: 18px;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  max-width: calc(100vw - 24px);
+  max-height: calc(100vh - 60px);
+  border-radius: 16px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.62);
-  backdrop-filter: blur(22px) saturate(160%);
-  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  backdrop-filter: blur(4px) saturate(160%);
+  -webkit-backdrop-filter: blur(4px) saturate(160%);
   border: 1px solid rgba(255, 255, 255, 0.7);
   box-shadow: 0 24px 60px rgba(30, 60, 110, 0.28);
 }
 
-.welcome-header {
+.windowheader {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -104,40 +106,60 @@ body {
   padding: 12px 14px;
   background: rgba(214, 231, 248, 0.7);
   border-bottom: 1px solid rgba(255, 255, 255, 0.6);
+  cursor: grab;
+  user-select: none;
 }
 
-.welcome-title {
+.windowheader:active,
+.window--dragging .windowheader {
+  cursor: grabbing;
+}
+
+.windowtitle {
   font-size: 14px;
   font-weight: 600;
   color: #2b4a72;
 }
 
-.welcome-close {
+.closebutton {
   display: grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
+  width: 16px;
+  height: 16px;
+  padding: 0;
   border: none;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.75);
-  color: #2b4a72;
-  font-size: 17px;
+  background: #ff5f57;
+  color: transparent;
+  font-size: 0;
   line-height: 1;
   cursor: pointer;
   transition:
-    background 0.15s ease,
-    color 0.15s ease;
+    transform 0.12s ease,
+    filter 0.12s ease;
 }
 
-.welcome-close:hover {
-  background: #ff5f57;
-  color: #fff;
+.closebutton:hover {
+  filter: brightness(1.08);
+  transform: scale(1.15);
 }
 
-.welcome-body {
+/* Keep the window itself selectable, but never while a drag is running. */
+.windowbody {
   padding: 22px 24px 26px;
+  overflow: auto;
   color: #24405f;
 }
+
+body.window-dragging,
+body.window-dragging * {
+  user-select: none !important;
+  cursor: grabbing !important;
+}
+
+/* ==========================================================================
+   Welcome window content
+   ========================================================================== */
 
 .welcome-greeting {
   margin-bottom: 12px;
@@ -242,13 +264,11 @@ body {
 }
 
 /* --- System tray --------------------------------------------------------- */
-
 .taskbar-tray {
   gap: 6px;
   min-width: 0;
   flex-shrink: 0;
 }
-
 .taskbar-chip {
   gap: 6px;
   padding: 6px 10px;
