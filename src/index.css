@@ -105,7 +105,9 @@ body {
   background: transparent;
   font: inherit;
   cursor: pointer;
-  transition: background 0.12s ease, border-color 0.12s ease;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease;
 }
 
 .desktop-shortcut:hover {
@@ -254,9 +256,9 @@ body.window-dragging * {
   font-weight: 700;
 }
 
-/* ==========================================================================
+/* 
    Note app (split pane)
-   ========================================================================== */
+    */
 
 .noteapp {
   display: flex;
@@ -267,7 +269,7 @@ body.window-dragging * {
   color: #24405f;
 }
 
-/* --- Sidebar ------------------------------------------------------------- */
+/* --- Sidebar  */
 
 .noteapp-sidebar {
   display: flex;
@@ -310,7 +312,7 @@ body.window-dragging * {
   padding: 6px;
 }
 
-/* --- Sidebar cards ------------------------------------------------------- */
+/* --- Sidebar cards */
 
 .noteapp-item {
   display: flex;
@@ -437,10 +439,7 @@ body.window-dragging * {
   line-height: 1.6;
 }
 
-/* ==========================================================================
-   Browser app — Chrome-style chrome, Google-style pages
-   ========================================================================== */
-
+/* Browser app Chrome-style chrome, Google-style pages */
 /* Google and Chrome both render in Arial, so the whole app inherits it. */
 .chr {
   display: flex;

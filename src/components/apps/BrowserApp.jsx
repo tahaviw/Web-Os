@@ -132,9 +132,7 @@ function buildResults(query) {
   ];
 }
 
-/* --------------------------------------------------------------------------
-   Chrome-shaped icons
-   -------------------------------------------------------------------------- */
+// chrome icone
 
 function AppsGridIcon() {
   return (
@@ -199,7 +197,6 @@ function StarIcon() {
     </svg>
   );
 }
-
 function MenuIcon() {
   return (
     <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
@@ -211,7 +208,6 @@ function MenuIcon() {
     </svg>
   );
 }
-
 let tabCounter = 0;
 const createTab = (url = HOME_URL) => {
   tabCounter += 1;
