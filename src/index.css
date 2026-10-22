@@ -1449,3 +1449,78 @@ body.window-dragging * {
   font: inherit;
   caret-color: #7ee787;
 }
+
+/* --- help output ------------------------------------------------------- */
+
+.terminal-line--help {
+  white-space: normal;
+}
+
+.terminal-help-group + .terminal-help-group {
+  margin-top: 10px;
+}
+
+.terminal-help-section {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #7d8590;
+}
+
+.terminal-help-row {
+  display: flex;
+  gap: 14px;
+}
+
+.terminal-help-cmd {
+  flex: 0 0 130px;
+  color: #79c0ff;
+}
+
+.terminal-help-desc {
+  color: #adbac7;
+}
+
+/* --- neofetch ---------------------------------------------------------- */
+
+.terminal-line--fetch {
+  display: flex;
+  align-items: flex-start;
+  gap: 22px;
+  white-space: normal;
+}
+
+.terminal-fetch-logo {
+  margin: 0;
+  font: inherit;
+  line-height: 1.25;
+  color: #7ee787;
+  user-select: none;
+}
+
+.terminal-fetch-name {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.terminal-fetch-user {
+  font-weight: 700;
+  color: #7ee787;
+}
+
+.terminal-fetch-rule {
+  color: #7d8590;
+}
+
+.terminal-fetch-row {
+  display: flex;
+  gap: 10px;
+}
+
+.terminal-fetch-label {
+  flex: 0 0 76px;
+  text-align: right;
+  color: #79c0ff;
+}

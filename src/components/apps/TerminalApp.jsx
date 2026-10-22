@@ -3,14 +3,10 @@ import { useEffect, useRef, useState } from "react";
 /** Matches the account name the taskbar tray shows. */
 const userName = "tahaviw";
 
-/** Prefix every command is typed after. */
-const PROMPT = `${userName}@webos:~$`;
+const HOSTNAME = "webos";
+const PWD = `/home/${userName}`;
+const PROMPT = `${userName}@${HOSTNAME}:~$`;
 
-/**
- * What `ls` reports. Static on purpose — the terminal is self-contained, so
- * it answers from a constant instead of walking a real filesystem. The
- * trailing slash marks directories, same convention a real `ls` uses.
- */
 const DIRS = [
   "Desktop/",
   "Documents/",
@@ -18,31 +14,131 @@ const DIRS = [
   "Pictures/",
   "Music/",
   "Projects/",
-  "resume.pdf",
+];
+const FILES = ["readme.txt", "todo.md", "resume.pdf"];
+
+const CONTENT = {
+  "readme.txt": [
+    "TahaviwOS",
+    "=========",
+    "",
+    "A desktop environment that runs entirely in your browser.",
+    "Windows, taskbar and apps are all React components — no iframe,",
+    "no canvas, no native code anywhere in this project.",
+    "",
+    "Everything you can do here with a mouse is a real, focusable",
+    "button or input underneath.",
+  ],
+  "todo.md": [
+    "# TODO",
+    "",
+    "- [x] Draggable windows",
+    "- [x] Taskbar with quick launch",
+    "- [x] Terminal with a working shell",
+    "- [ ] Window resizing",
+    "- [ ] Persist window positions",
+    "- [ ] Start menu",
+  ],
+};
+
+/**
+ * What `open <app>` accepts. The values double as the APPS keys in
+ * App.jsx, so a title in here is guaranteed to be something that can
+ * actually be opened.
+ */
+const OPENABLE = {
+  welcome: "Welcome",
+  note: "Note",
+  notes: "Note",
+  terminal: "Terminal",
+  shell: "Terminal",
+  browser: "Browser",
+  web: "Browser",
+};
+
+/** `help` output, grouped so it scans instead of reading as one flat wall. */
+const HELP_GROUPS = [
+  {
+    section: "Files",
+    rows: [
+      ["ls", "list this directory"],
+      ["cat <file>", "print a file"],
+      ["pwd", "print the working directory"],
+    ],
+  },
+  {
+    section: "System",
+    rows: [
+      ["open <app>", "launch an app window"],
+      ["neofetch", "system info"],
+      ["date", "current date and time"],
+    ],
+  },
+  {
+    section: "Shell",
+    rows: [
+      ["echo <text>", "print text"],
+      ["help", "this list"],
+      ["clear", "clear the screen"],
+      ["exit", "close the terminal"],
+    ],
+  },
+];
+
+/** `neofetch` logo — a window, because that is what this OS is made of. */
+const FETCH_LOGO = [
+  "  ┌───────────────┐",
+  "  │ ▓▓▓▓▓▓▓▓▓▓▓▓▓ │",
+  "  │ ▓           ▓ │",
+  "  │ ▓           ▓ │",
+  "  │ ▓           ▓ │",
+  "  └───────────────┘",
 ];
 
 /**
- * Printed once when the window opens, so the three supported commands are
- * discoverable without a separate help page.
+ * Live values for `neofetch`, measured when the command runs rather than
+ * at mount — an uptime captured on first render goes stale immediately.
+ */
+function fetchInfo() {
+  const seconds = Math.floor(performance.now() / 1000);
+  const uptime =
+    seconds >= 60
+      ? `${Math.floor(seconds / 60)}m ${seconds % 60}s`
+      : `${seconds}s`;
+
+  return [
+    ["OS", "TahaviwOS 0.1 — runs in your browser"],
+    ["Build", "React + Vite"],
+    ["Shell", "tahaviw-sh 1.0"],
+    ["User", userName],
+    ["Display", `${window.innerWidth} × ${window.innerHeight}`],
+    ["Uptime", uptime],
+  ];
+}
+
+/**
+ * Printed once when the window opens, so the entry point is obvious
+ * without a separate help page.
  */
 const BOOT_LINES = [
   {
     kind: "boot",
     text: "TahaviwOS shell — everything here runs in the browser.",
   },
-  { kind: "boot", text: "Try: whoami, ls, exit" },
+  { kind: "boot", text: "Type help for the command list." },
 ];
 
 /**
- * A shell with three commands:
- *   whoami — prints the signed-in account
- *   ls     — prints a fake directory listing
- *   exit   — closes this window through `onClose`
+ * A shell that runs entirely in the DOM. Output is an array of line
+ * objects rather than one string, because some commands emit structure
+ * (`ls` wants a grid, `help` wants columns) and flattening that into text
+ * first would only mean re-splitting it on the way back out.
  *
- * Anything else gets a "command not found", because a shell that silently
- * ignores a typo teaches the user nothing.
+ * Props:
+ *   onClose    — closes the window; wired to `exit`
+ *   onOpenApp  — opens/focuses another window; wired to `open`
  */
-function TerminalApp({ onClose }) {
+function TerminalApp({ onClose, onOpenApp }) {
   const [draft, setDraft] = useState("");
   const [lines, setLines] = useState(() =>
     BOOT_LINES.map((line, index) => ({ id: index, ...line })),
@@ -74,24 +170,178 @@ function TerminalApp({ onClose }) {
     if (!input) return;
 
     push({ kind: "cmd", text: input });
-    const [command] = input.split(/\s+/);
+    const [command, ...args] = input.split(/\s+/);
 
     switch (command) {
+      case "help":
+        push({ kind: "help", groups: HELP_GROUPS });
+        break;
+
+      case "clear":
+        // The only command that removes lines instead of adding one.
+        setLines([]);
+        break;
+
       case "whoami":
         push({ kind: "out", text: userName });
         break;
-      case "ls":
-        push({ kind: "dirs", items: DIRS });
+
+      case "pwd":
+        push({ kind: "out", text: PWD });
         break;
+
+      case "ls":
+        // Directories first, then files — the sort order a real ls uses.
+        push({ kind: "dirs", items: [...DIRS, ...FILES] });
+        break;
+
+      case "echo":
+        // Slice from after the command word, so internal spacing survives.
+        push({ kind: "out", text: input.slice(command.length).trim() });
+        break;
+
+      case "date":
+        push({
+          kind: "out",
+          text: new Date().toLocaleString(undefined, {
+            dateStyle: "full",
+            timeStyle: "medium",
+          }),
+        });
+        break;
+
+      case "cat": {
+        const target = args[0];
+        if (!target) {
+          push({ kind: "err", text: "cat: missing file operand" });
+        } else if (target.endsWith("/")) {
+          push({ kind: "err", text: `cat: ${target}: Is a directory` });
+        } else if (CONTENT[target]) {
+          CONTENT[target].forEach((text) => push({ kind: "out", text }));
+        } else if (FILES.includes(target)) {
+          push({
+            kind: "err",
+            text: `cat: ${target}: binary file (not shown)`,
+          });
+        } else {
+          push({
+            kind: "err",
+            text: `cat: ${target}: No such file or directory`,
+          });
+        }
+        break;
+      }
+
+      case "open": {
+        const target = (args[0] ?? "").toLowerCase();
+        const title = OPENABLE[target];
+        if (!title) {
+          push({
+            kind: "err",
+            text: `open: unknown app${target ? ` "${target}"` : ""}`,
+          });
+          push({
+            kind: "out",
+            text: `Try: ${Object.keys(OPENABLE).join(", ")}`,
+          });
+        } else if (onOpenApp) {
+          onOpenApp(title.toLowerCase());
+          push({ kind: "out", text: `launched ${title}` });
+        } else {
+          push({ kind: "err", text: "open: no window manager attached" });
+        }
+        break;
+      }
+
+      case "neofetch":
+        push({ kind: "fetch", logo: FETCH_LOGO, info: fetchInfo() });
+        break;
+
       case "exit":
-        // The state push above never renders — this window is about to
-        // unmount — so closing is the whole effect of the command.
         onClose?.();
         break;
+
       default:
         push({ kind: "err", text: `command not found: ${command}` });
-        push({ kind: "out", text: "Available commands: whoami, ls, exit" });
+        push({ kind: "out", text: "Type help for the command list." });
     }
+  };
+
+  /**
+   * Four line shapes render structurally different output. Kept as a
+   * function rather than nested ternaries in the map — by the third shape
+   * a ternary chain stops being readable.
+   */
+  const renderLine = (line) => {
+    if (line.kind === "dirs") {
+      return (
+        <div key={line.id} className="terminal-line terminal-line--dirs">
+          {line.items.map((item) => (
+            <span
+              key={item}
+              className={item.endsWith("/") ? "terminal-dir" : "terminal-file"}
+            >
+              {item}
+            </span>
+          ))}
+        </div>
+      );
+    }
+
+    if (line.kind === "help") {
+      return (
+        <div key={line.id} className="terminal-line terminal-line--help">
+          {line.groups.map((group) => (
+            <div key={group.section} className="terminal-help-group">
+              <div className="terminal-help-section">{group.section}</div>
+              {group.rows.map(([cmd, desc]) => (
+                <div key={cmd} className="terminal-help-row">
+                  <span className="terminal-help-cmd">{cmd}</span>
+                  <span className="terminal-help-desc">{desc}</span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (line.kind === "fetch") {
+      return (
+        <div key={line.id} className="terminal-line terminal-line--fetch">
+          <pre className="terminal-fetch-logo">{line.logo.join("\n")}</pre>
+          <div className="terminal-fetch-info">
+            <div className="terminal-fetch-name">
+              <span className="terminal-fetch-user">
+                {userName}@{HOSTNAME}
+              </span>
+              <span className="terminal-fetch-rule">──────────</span>
+            </div>
+            {line.info.map(([label, value]) => (
+              <div key={label} className="terminal-fetch-row">
+                <span className="terminal-fetch-label">{label}</span>
+                <span>{value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div
+        key={line.id}
+        className={`terminal-line terminal-line--${line.kind}`}
+      >
+        {line.kind === "cmd" ? (
+          <>
+            <span className="terminal-prompt">{PROMPT}</span> {line.text}
+          </>
+        ) : (
+          line.text
+        )}
+      </div>
+    );
   };
 
   return (
@@ -106,41 +356,7 @@ function TerminalApp({ onClose }) {
         role="log"
         aria-live="polite"
       >
-        {lines.map((line) => {
-          // `ls` gets a wrapped grid rather than one path per line, which is
-          // how a shell with a wide enough terminal lays it out.
-          if (line.kind === "dirs") {
-            return (
-              <div key={line.id} className="terminal-line terminal-line--dirs">
-                {line.items.map((item) => (
-                  <span
-                    key={item}
-                    className={
-                      item.endsWith("/") ? "terminal-dir" : "terminal-file"
-                    }
-                  >
-                    {item}
-                  </span>
-                ))}
-              </div>
-            );
-          }
-
-          return (
-            <div
-              key={line.id}
-              className={`terminal-line terminal-line--${line.kind}`}
-            >
-              {line.kind === "cmd" ? (
-                <>
-                  <span className="terminal-prompt">{PROMPT}</span> {line.text}
-                </>
-              ) : (
-                line.text
-              )}
-            </div>
-          );
-        })}
+        {lines.map(renderLine)}
       </div>
 
       <form className="terminal-inputrow" onSubmit={submit}>

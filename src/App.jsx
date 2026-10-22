@@ -106,7 +106,10 @@ function App() {
             onClose={() => closeWindow(appId)}
           >
             {AppComponent ? (
-              <AppComponent onClose={() => closeWindow(appId)} />
+              <AppComponent
+                onClose={() => closeWindow(appId)}
+                onOpenApp={openWindow}
+              />
             ) : (
               app.content
             )}
