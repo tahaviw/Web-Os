@@ -77,7 +77,7 @@ const NOTES = [
         </p>
         <p>
           <strong>Decisions:</strong> Ship the frosted-glass taskbar as-is. Hold
-          on window snapping until v2.
+          on window snapping until V2.
         </p>
         <p>
           <strong>Next:</strong> Note app split pane, then Terminal.

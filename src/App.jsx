@@ -4,6 +4,7 @@ import Window from "./components/Window";
 import NoteApp from "./components/apps/NoteApp";
 import BrowserApp from "./components/apps/BrowserApp";
 import browserIcon from "./assets/Icons/browser-icon.png";
+import TerminalApp from "./components/apps/TerminalApp";
 
 const APPS = {
   welcome: {
@@ -15,11 +16,11 @@ const APPS = {
         <p className="welcome-text">
           This is a desktop environment that runs entirely in your browser.
           Everything you see the wallpaper, the windows, the taskbar is built
-          with React.
+          with React
         </p>
         <p className="welcome-text">
           Drag any window by its title bar to move it around, and close it with
-          the red dot in the corner.
+          the red dot in the corner
         </p>
       </>
     ),
@@ -34,7 +35,9 @@ const APPS = {
   terminal: {
     title: "Terminal",
     width: 560,
-    content: <p>Terminal goes here.</p>,
+    height: 360,
+    bodyClassName: "windowbody--flush",
+    Component: TerminalApp,
   },
   browser: {
     title: "Browser",
@@ -90,6 +93,7 @@ function App() {
     <div className="desktop">
       {Object.entries(openWindows).map(([appId, zIndex]) => {
         const app = APPS[appId];
+        const AppComponent = app.Component;
         return (
           <Window
             key={appId}
@@ -101,7 +105,11 @@ function App() {
             onFocus={() => bringToFront(appId)}
             onClose={() => closeWindow(appId)}
           >
-            {app.content}
+            {AppComponent ? (
+              <AppComponent onClose={() => closeWindow(appId)} />
+            ) : (
+              app.content
+            )}
           </Window>
         );
       })}
