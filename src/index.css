@@ -9,10 +9,6 @@
   padding: 0;
 }
 
-/* ==========================================================================
-   Typography
-   ========================================================================== */
-
 body {
   font-family:
     "Segoe UI Variable Text",
@@ -46,7 +42,7 @@ select {
 *::-webkit-scrollbar {
   width: 0;
   height: 0;
-  display: none; /* Chrome, Safari, Opera, newer Edge */
+  display: none;
 }
 
 *::-webkit-scrollbar-track,
