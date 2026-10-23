@@ -35,9 +35,10 @@ const CONTENT = {
     "- [x] Draggable windows",
     "- [x] Taskbar with quick launch",
     "- [x] Terminal with a working shell",
-    "- [ ] Window resizing",
-    "- [ ] Persist window positions",
+    "- [x] Window resizing",
+    "- [x] Persist window positions",
     "- [ ] Start menu",
+    "- [ ] Change wallpaper",
   ],
 };
 

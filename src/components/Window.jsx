@@ -1,15 +1,84 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 /** Keep at least this many pixels of the window on screen. */
 const MIN_VISIBLE = 80;
 const TASKBAR_HEIGHT = 48;
-
-/** A window can never be shrunk below these, or its app stops being usable. */
 const MIN_WIDTH = 320;
 const MIN_HEIGHT = 200;
+const STORAGE_PREFIX = "webos:v1";
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
+}
+
+/** Debounced localStorage write with unmount flush. */
+function useDebouncedWrite(key, value, delay = 250) {
+  const pendingRef = useRef(value);
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    pendingRef.current = value;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+      } catch {}
+      timerRef.current = null;
+    }, delay);
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [key, value, delay]);
+
+  useEffect(
+    () => () => {
+      if (pendingRef.current !== undefined) {
+        try {
+          localStorage.setItem(key, JSON.stringify(pendingRef.current));
+        } catch {}
+      }
+    },
+    [key],
+  );
+}
+
+/** Read a single window's geometry. */
+function loadWindowGeometry(appId) {
+  try {
+    const raw = localStorage.getItem(`${STORAGE_PREFIX}:win:${appId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Clamp a restored rect so the window is never stranded off-screen. */
+function clampIntoView(
+  geom,
+  { minVisible = 80, taskbarHeight = 48, headerHeight = 40 } = {},
+) {
+  if (!geom || geom.maximized) return geom;
+  const w = geom.width ?? 460;
+  const h = geom.height ?? 300;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const maxX = vw - minVisible;
+  const minX = minVisible - w;
+  const maxY = vh - taskbarHeight - headerHeight;
+  const minY = 0;
+  return {
+    ...geom,
+    x:
+      geom.x !== null && geom.x !== undefined
+        ? Math.min(Math.max(geom.x, minX), maxX)
+        : null,
+    y:
+      geom.y !== null && geom.y !== undefined
+        ? Math.min(Math.max(geom.y, minY), maxY)
+        : null,
+  };
 }
 
 function MaximizeGlyph() {
@@ -32,8 +101,6 @@ function MaximizeGlyph() {
 function RestoreGlyph() {
   return (
     <svg viewBox="0 0 12 12" width="10" height="10" aria-hidden="true">
-      {/* Back square: only the edges the front one doesn't cover are drawn,
-          because the button has no solid fill to occlude them with. */}
       <path
         d="M5 2 H10 V7 H7 M5 2 V5"
         fill="none"
@@ -41,7 +108,6 @@ function RestoreGlyph() {
         strokeWidth="1.4"
         strokeLinecap="round"
       />
-
       <rect
         x="2"
         y="5"
@@ -56,15 +122,6 @@ function RestoreGlyph() {
   );
 }
 
-/**
- * Draggable, resizable, maximizable window shell.
- *
- * Drag and resize listeners are bound to `window` (not the header or the
- * grip) for the duration of the gesture. Binding them to the element you
- * pressed is the usual mistake: move the pointer faster than that element
- * and it escapes, leaving the window stuck mid-drag until you happen to
- * mouse-up back over it.
- */
 function Window({
   title,
   width = 460,
@@ -73,38 +130,73 @@ function Window({
   initialY,
   zIndex = 100,
   bodyClassName = "",
+  appId,
   onFocus,
   onClose,
   children,
 }) {
-  const [isDragging, setIsDragging] = useState(false);
-  const [isMaximized, setIsMaximized] = useState(false);
-  // `null` means "not positioned yet" — the window is centred by CSS instead
-  // of by guessing pixel coordinates. The real height isn't known on the first
-  // render (the `height` prop is optional), so any computed value would be a
-  // guess that drifts with the content and the viewport.
-  const [position, setPosition] = useState(() =>
-    initialX === undefined && initialY === undefined
-      ? null
-      : { x: initialX ?? 0, y: initialY ?? 0 },
+  // ----- Persisted geometry (hydrated once on mount) -----
+  const saved = useMemo(() => {
+    if (!appId) return null;
+    const raw = loadWindowGeometry(appId);
+    return raw
+      ? clampIntoView(raw, {
+          minVisible: MIN_VISIBLE,
+          taskbarHeight: TASKBAR_HEIGHT,
+        })
+      : null;
+  }, [appId]);
+
+  // ----- Local state mirrors the saved shape -----
+  const [position, setPosition] = useState(() => {
+    if (
+      saved?.x !== undefined &&
+      saved?.y !== undefined &&
+      saved.x !== null &&
+      saved.y !== null
+    ) {
+      return { x: saved.x, y: saved.y };
+    }
+    if (initialX !== undefined && initialY !== undefined) {
+      return { x: initialX, y: initialY };
+    }
+    return null;
+  });
+
+  const [size, setSize] = useState(() => ({
+    width: saved?.width ?? width,
+    height: saved?.height ?? height,
+  }));
+
+  const [isMaximized, setIsMaximized] = useState(saved?.maximized ?? false);
+  const [restoreRect, setRestoreRect] = useState(saved?.restore ?? null);
+
+  // ----- Persist whenever geometry changes -----
+  const snapshot = useMemo(
+    () => ({
+      x: position?.x ?? null,
+      y: position?.y ?? null,
+      width: size.width,
+      height: size.height,
+      maximized: isMaximized,
+      restore: restoreRect,
+    }),
+    [position, size, isMaximized, restoreRect],
   );
-  // Same reasoning as `position`, but for sizing: it starts from the props and
-  // only diverges once the user actually resizes.
-  const [size, setSize] = useState({ width, height });
+
+  useDebouncedWrite(appId ? `${STORAGE_PREFIX}:win:${appId}` : "", snapshot);
+
+  // ----- Drag / resize / maximize logic -----
+  const [isDragging, setIsDragging] = useState(false);
 
   const sectionRef = useRef(null);
   const headerRef = useRef(null);
-  /** Cursor position relative to the window origin, captured on mousedown. */
   const grabOffsetRef = useRef({ x: 0, y: 0 });
-  /** The listeners bound for the in-flight gesture, so we can tear them down. */
   const listenersRef = useRef(null);
-  /** The rect we maximized over, so restore can put the window back exactly. */
-  const restoreRectRef = useRef(null);
 
   const stopInteraction = useCallback(() => {
     const listeners = listenersRef.current;
     if (!listeners) return;
-
     window.removeEventListener("mousemove", listeners.move);
     window.removeEventListener("mouseup", listeners.up);
     listenersRef.current = null;
@@ -112,28 +204,18 @@ function Window({
     document.body.classList.remove("window-dragging", "window-resizing");
   }, []);
 
-  // If a gesture is in flight when this window unmounts, don't leak listeners.
   useEffect(() => stopInteraction, [stopInteraction]);
 
   const startDrag = useCallback(
     (event) => {
-      // Right/middle click shouldn't drag.
       if (event.button !== 0) return;
-      // Clicking a header button must not also start a drag.
       if (event.target.closest(".closebutton, .maximizebutton")) return;
-      // A maximized window is pinned to the screen — there is nowhere to go.
       if (isMaximized) return;
-
       onFocus?.();
 
-      // Read the real on-screen rect rather than trusting `position`: the
-      // window may still be CSS-centred (position === null), and this keeps
-      // the handoff seamless either way.
       const rect = sectionRef.current?.getBoundingClientRect();
       if (!rect) return;
 
-      // Subtract this offset on every move so the window doesn't jump so its
-      // top-left corner snaps under the cursor.
       grabOffsetRef.current = {
         x: event.clientX - rect.left,
         y: event.clientY - rect.top,
@@ -146,61 +228,49 @@ function Window({
         const { x: grabX, y: grabY } = grabOffsetRef.current;
         const nextX = clamp(
           moveEvent.clientX - grabX,
-          MIN_VISIBLE - width,
+          MIN_VISIBLE - size.width,
           window.innerWidth - MIN_VISIBLE,
         );
         const nextY = clamp(moveEvent.clientY - grabY, 0, maxY);
-
-        // Bail out if nothing changed, so dragging along one axis doesn't
-        // schedule extra renders.
-        setPosition((current) =>
-          current && current.x === nextX && current.y === nextY
-            ? current
+        setPosition((cur) =>
+          cur && cur.x === nextX && cur.y === nextY
+            ? cur
             : { x: nextX, y: nextY },
         );
       };
-
       const handleMouseUp = () => stopInteraction();
 
       listenersRef.current = { move: handleMouseMove, up: handleMouseUp };
       window.addEventListener("mousemove", handleMouseMove);
       window.addEventListener("mouseup", handleMouseUp);
-      // Suppress text selection everywhere, not just inside the header.
       document.body.classList.add("window-dragging");
       setIsDragging(true);
     },
-    [isMaximized, onFocus, stopInteraction, width],
+    [isMaximized, onFocus, stopInteraction, size.width],
   );
 
   const startResize = useCallback(
     (event) => {
       if (event.button !== 0) return;
       if (isMaximized) return;
-
       onFocus?.();
 
       const rect = sectionRef.current?.getBoundingClientRect();
       if (!rect) return;
 
-      // Sync state to what is actually on screen before measuring the drag.
-      // The width may be narrower than `size.width` — the CSS max-width caps
-      // it on small viewports — and resizing from the stored value would
-      // make the window jump by that difference on the first mouse move.
-      setPosition((current) =>
-        current && current.x === rect.left && current.y === rect.top
-          ? current
+      setPosition((cur) =>
+        cur && cur.x === rect.left && cur.y === rect.top
+          ? cur
           : { x: rect.left, y: rect.top },
       );
-      setSize((current) =>
-        current.width === rect.width && current.height === rect.height
-          ? current
+      setSize((cur) =>
+        cur.width === rect.width && cur.height === rect.height
+          ? cur
           : { width: rect.width, height: rect.height },
       );
 
       const startPointer = { x: event.clientX, y: event.clientY };
       const startSize = { width: rect.width, height: rect.height };
-      // Computed once at mousedown: a resize should not start clamping
-      // differently halfway through because the window moved.
       const maxW = Math.max(
         MIN_WIDTH,
         window.innerWidth - rect.left - MIN_VISIBLE,
@@ -221,14 +291,12 @@ function Window({
           MIN_HEIGHT,
           maxH,
         );
-
-        setSize((current) =>
-          current.width === nextWidth && current.height === nextHeight
-            ? current
+        setSize((cur) =>
+          cur.width === nextWidth && cur.height === nextHeight
+            ? cur
             : { width: nextWidth, height: nextHeight },
         );
       };
-
       const handleMouseUp = () => stopInteraction();
 
       listenersRef.current = { move: handleMouseMove, up: handleMouseUp };
@@ -242,70 +310,58 @@ function Window({
   const toggleMaximize = useCallback(() => {
     const section = sectionRef.current;
     if (!section) return;
-
     onFocus?.();
 
     if (isMaximized) {
       setIsMaximized(false);
-      const saved = restoreRectRef.current;
-      if (!saved) return;
-      // Restore to the measured rect, not to `position`/`size` as they were —
-      // the window may have been CSS-centred, and the rect is the one thing
-      // that is guaranteed to describe where it really was.
-      setPosition({ x: saved.x, y: saved.y });
-      setSize({ width: saved.width, height: saved.height });
+      if (restoreRect) {
+        setPosition({ x: restoreRect.x, y: restoreRect.y });
+        setSize({ width: restoreRect.width, height: restoreRect.height });
+      }
       return;
     }
 
     const rect = section.getBoundingClientRect();
-    restoreRectRef.current = {
+    setRestoreRect({
       x: rect.left,
       y: rect.top,
       width: rect.width,
       height: rect.height,
-    };
+    });
     setPosition({ x: 0, y: 0 });
     setSize({
       width: window.innerWidth,
       height: window.innerHeight - TASKBAR_HEIGHT,
     });
     setIsMaximized(true);
-  }, [isMaximized, onFocus]);
+  }, [isMaximized, onFocus, restoreRect]);
 
-  // A maximized window is sized in pixels, so it has to follow the viewport —
-  // rotating a phone or dragging the browser edge would otherwise leave a gap.
   useEffect(() => {
     if (!isMaximized) return undefined;
-
-    const fitToViewport = () =>
+    const fit = () =>
       setSize({
         width: window.innerWidth,
         height: window.innerHeight - TASKBAR_HEIGHT,
       });
-
-    fitToViewport();
-    window.addEventListener("resize", fitToViewport);
-    return () => window.removeEventListener("resize", fitToViewport);
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
   }, [isMaximized]);
 
-  // Escape leaves fullscreen, the convention every fullscreen UI shares.
   useEffect(() => {
     if (!isMaximized) return undefined;
-
-    const handleKeyDown = (event) => {
-      if (event.key === "Escape") toggleMaximize();
+    const onKey = (e) => {
+      if (e.key === "Escape") toggleMaximize();
     };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, [isMaximized, toggleMaximize]);
 
+  // ----- Render -----
   return (
     <section
       ref={sectionRef}
-      className={`window${position === null ? " window--centered" : ""}${
-        isDragging ? " window--dragging" : ""
-      }${isMaximized ? " window--maximized" : ""}`}
+      className={`window${position === null ? " window--centered" : ""}${isDragging ? " window--dragging" : ""}${isMaximized ? " window--maximized" : ""}`}
       style={{
         width: size.width,
         height: size.height,
@@ -351,7 +407,6 @@ function Window({
         {children}
       </div>
 
-      {/* Invisible corner hotspot — the grip marks itself on window hover. */}
       <div
         className="resizehandle"
         onMouseDown={startResize}

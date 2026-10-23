@@ -1,10 +1,12 @@
-import { useCallback, useRef, useState } from "react";
+import { useEffect, useCallback, useMemo, useRef, useState } from "react";
 import Taskbar from "./components/Taskbar";
 import Window from "./components/Window";
 import NoteApp from "./components/apps/NoteApp";
 import BrowserApp from "./components/apps/BrowserApp";
-import browserIcon from "./assets/Icons/browser-icon.png";
 import TerminalApp from "./components/apps/TerminalApp";
+import browserIcon from "./assets/Icons/browser-icon.png";
+
+const STORAGE_PREFIX = "webos:v1";
 
 const APPS = {
   welcome: {
@@ -16,11 +18,11 @@ const APPS = {
         <p className="welcome-text">
           This is a desktop environment that runs entirely in your browser.
           Everything you see the wallpaper, the windows, the taskbar is built
-          with React
+          with React.
         </p>
         <p className="welcome-text">
           Drag any window by its title bar to move it around, and close it with
-          the red dot in the corner
+          the red dot in the corner.
         </p>
       </>
     ),
@@ -48,30 +50,72 @@ const APPS = {
   },
 };
 
-/**
- * Icons pinned to the desktop itself, stacked down the left edge.
- * `id` must be a key of APPS so the shortcut can only ever open a real app.
- */
 const DESKTOP_SHORTCUTS = [
   { id: "browser", label: "Browser", icon: browserIcon },
 ];
 
+/** Load session from localStorage (open map + z counter). */
+function loadSession() {
+  try {
+    const raw = localStorage.getItem(`${STORAGE_PREFIX}:session`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Debounced write for the session record. */
+function useDebouncedWrite(key, value, delay = 250) {
+  const pendingRef = useRef(value);
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    pendingRef.current = value;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+      } catch {}
+      timerRef.current = null;
+    }, delay);
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [key, value, delay]);
+
+  useEffect(
+    () => () => {
+      if (pendingRef.current !== undefined) {
+        try {
+          localStorage.setItem(key, JSON.stringify(pendingRef.current));
+        } catch {}
+      }
+    },
+    [key],
+  );
+}
+
 function App() {
-  // appId -> z-index. Presence in this object is what "is open" means.
-  // z-index is only used for stacking, so it can live entirely in a ref —
-  // no need to make it state and re-render the whole tree on every focus.
-  const [openWindows, setOpenWindows] = useState({ welcome: 100 });
-  const zCounterRef = useRef(100);
+  // ---- Session persistence (open windows + z-order) ----
+  const savedSession = useMemo(() => loadSession(), []);
+
+  const [openWindows, setOpenWindows] = useState(
+    () => savedSession?.open ?? { welcome: 100 },
+  );
+
+  const zCounterRef = useRef(
+    savedSession?.zCounter ??
+      Math.max(100, ...Object.values(savedSession?.open ?? {})),
+  );
 
   const bringToFront = useCallback((appId) => {
     zCounterRef.current += 1;
     const z = zCounterRef.current;
-    setOpenWindows((current) =>
-      current[appId] === z ? current : { ...current, [appId]: z },
-    );
+    setOpenWindows((cur) => (cur[appId] === z ? cur : { ...cur, [appId]: z }));
   }, []);
 
-  // Opens the app, or just re-focuses it if it is already open.
   const openWindow = useCallback(
     (appId) => {
       if (!APPS[appId]) return;
@@ -81,13 +125,22 @@ function App() {
   );
 
   const closeWindow = useCallback((appId) => {
-    setOpenWindows((current) => {
-      if (current[appId] === undefined) return current;
-      const next = { ...current };
+    setOpenWindows((cur) => {
+      if (cur[appId] === undefined) return cur;
+      const next = { ...cur };
       delete next[appId];
       return next;
     });
   }, []);
+
+  // Debounced write of the session (open map + z counter)
+  useDebouncedWrite(
+    `${STORAGE_PREFIX}:session`,
+    useMemo(
+      () => ({ open: openWindows, zCounter: zCounterRef.current }),
+      [openWindows],
+    ),
+  );
 
   return (
     <div className="desktop">
@@ -102,6 +155,7 @@ function App() {
             height={app.height}
             bodyClassName={app.bodyClassName}
             zIndex={zIndex}
+            appId={appId}
             onFocus={() => bringToFront(appId)}
             onClose={() => closeWindow(appId)}
           >
