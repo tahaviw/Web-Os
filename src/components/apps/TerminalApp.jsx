@@ -37,7 +37,7 @@ const CONTENT = {
     "- [x] Terminal with a working shell",
     "- [x] Window resizing",
     "- [x] Persist window positions",
-    "- [ ] Start menu",
+    "- [x] Start menu",
     "- [ ] Change wallpaper",
   ],
 };
