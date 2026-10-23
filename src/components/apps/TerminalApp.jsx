@@ -23,7 +23,7 @@ const CONTENT = {
     "=========",
     "",
     "A desktop environment that runs entirely in your browser.",
-    "Windows, taskbar and apps are all React components — no iframe,",
+    "Windows, taskbar and apps are all React components no iframe,",
     "no canvas, no native code anywhere in this project.",
     "",
     "Everything you can do here with a mouse is a real, focusable",

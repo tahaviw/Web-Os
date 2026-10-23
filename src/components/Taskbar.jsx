@@ -14,7 +14,7 @@ const QUICK_LAUNCH = [
   { id: "browser", label: "Browser", icon: browserIcon },
 ];
 
-const WEATHER_TEXT = "22°C Clear";
+const WEATHER_TEXT = "24°C Clear";
 const USER_NAME = "Tahaviw";
 
 function formatClock(date) {

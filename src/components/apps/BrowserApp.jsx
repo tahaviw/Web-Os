@@ -97,7 +97,6 @@ function buildResults(query) {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "") || "topic";
-
   return [
     {
       title: `${q} - Wikipedia`,

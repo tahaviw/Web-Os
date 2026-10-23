@@ -1524,3 +1524,93 @@ body.window-dragging * {
   text-align: right;
   color: #79c0ff;
 }
+
+/* ==========================================================================
+   Window controls: maximize / restore + resize grip
+   ========================================================================== */
+
+.windowcontrols {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.maximizebutton {
+  display: grid;
+  place-items: center;
+
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+
+  border-radius: 50%;
+  background: #28c840;
+  color: rgba(0, 0, 0, 0.55);
+  cursor: pointer;
+  transition:
+    transform 0.12s ease,
+    filter 0.12s ease;
+}
+
+.maximizebutton:hover {
+  filter: brightness(1.08);
+  transform: scale(1.15);
+}
+
+.maximizebutton svg {
+  display: block;
+}
+
+/* A maximized window sits flush to the screen edge and the taskbar, so the
+   rounded corner and drop shadow that separate a floating window stop
+   making sense. */
+.window--maximized {
+  max-width: none;
+  max-height: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.window--maximized .windowheader {
+  cursor: default;
+}
+
+/* --- Resize grip ------------------------------------------------------- */
+
+.resizehandle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  z-index: 2;
+}
+
+.resizehandle::after {
+  content: "";
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid rgba(43, 74, 114, 0.4);
+  border-bottom: 2px solid rgba(43, 74, 114, 0.4);
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.window:hover .resizehandle::after {
+  opacity: 1;
+}
+
+.window--maximized .resizehandle {
+  display: none;
+}
+
+body.window-resizing,
+body.window-resizing * {
+  user-select: none !important;
+  cursor: nwse-resize !important;
+}
