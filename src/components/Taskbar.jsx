@@ -90,7 +90,12 @@ function Taskbar({ onOpenApp }) {
 
           <div className="taskbar-clock">{time}</div>
 
-          <button type="button" className="taskbar-user" aria-label="Account">
+          <button
+            type="button"
+            className="taskbar-user"
+            aria-label="Account"
+            onClick={() => onOpenApp?.("welcome")}
+          >
             <img src={userIcon} alt="" draggable={false} />
             <span>{USER_NAME}</span>
           </button>
