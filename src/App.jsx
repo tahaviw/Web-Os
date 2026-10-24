@@ -1,4 +1,5 @@
-import { useEffect, useCallback, useMemo, useRef, useState } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
+import WallpaperMenu, { useWallpaper } from "./components/WallpaperMenu";
 import Taskbar from "./components/Taskbar";
 import Window from "./components/Window";
 import NoteApp from "./components/apps/NoteApp";
@@ -133,6 +134,29 @@ function App() {
     });
   }, []);
 
+  // ---- Wallpaper state (persisted) ----
+  const { current: wallpaper, setWallpaper } = useWallpaper();
+  const [wallpaperMenu, setWallpaperMenu] = useState(null); // {x, y} or null
+
+  const openWallpaperMenu = useCallback((e) => {
+    // Only open on right-click on the desktop background itself
+    if (e.button !== 2) return;
+    // Ignore if clicking a window, shortcut, or taskbar
+    if (e.target.closest(".window, .desktop-shortcut, .taskbar")) return;
+    e.preventDefault();
+    setWallpaperMenu({ x: e.clientX, y: e.clientY });
+  }, []);
+
+  const closeWallpaperMenu = useCallback(() => setWallpaperMenu(null), []);
+
+  const handleWallpaperSelect = useCallback(
+    (id) => {
+      setWallpaper(id);
+      closeWallpaperMenu();
+    },
+    [setWallpaper],
+  );
+
   // Debounced write of the session (open map + z counter)
   useDebouncedWrite(
     `${STORAGE_PREFIX}:session`,
@@ -143,7 +167,11 @@ function App() {
   );
 
   return (
-    <div className="desktop">
+    <div
+      className="desktop"
+      onContextMenu={openWallpaperMenu}
+      style={{ backgroundImage: `url(${wallpaper.src})` }}
+    >
       {Object.entries(openWindows).map(([appId, zIndex]) => {
         const app = APPS[appId];
         const AppComponent = app.Component;
@@ -192,6 +220,13 @@ function App() {
       </div>
 
       <Taskbar onOpenApp={openWindow} />
+
+      <WallpaperMenu
+        isOpen={!!wallpaperMenu}
+        onClose={closeWallpaperMenu}
+        onSelect={handleWallpaperSelect}
+        anchor={wallpaperMenu}
+      />
     </div>
   );
 }
