@@ -3,18 +3,18 @@ import { useEffect, useRef } from "react";
 const WALLPAPERS = [
   {
     id: "wallpaper-1",
-    label: "Mountain",
+    label: "Light Blue",
     src: "/src/assets/WallPaper/WallPaper-1.jpg",
   },
   {
-    id: "wallpaper-2",
-    label: "Ocean",
-    src: "/src/assets/WallPaper/WallPaper-2.jpg",
+    id: "wallpaper-3",
+    label: "Dark Blue",
+    src: "/src/assets/WallPaper/WallPaper-3.jpg",
   },
   {
-    id: "wallpaper-3",
-    label: "Forest",
-    src: "/src/assets/WallPaper/WallPaper-3.jpg",
+    id: "wallpaper-2",
+    label: "Red",
+    src: "/src/assets/WallPaper/WallPaper-2.jpg",
   },
 ];
 
