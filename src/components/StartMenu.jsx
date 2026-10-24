@@ -12,7 +12,7 @@ import calendarIcon from "../assets/Icons/calendar-icon.png";
 import mailIcon from "../assets/Icons/mail-icon.png";
 import storeIcon from "../assets/Icons/store-icon.png";
 import settingsIcon from "../assets/Icons/settings-icon.png";
-import powerIcon from "../assets/Icons/battery-icon.png"; // battery used as power
+import powerIcon from "../assets/Icons/battery-icon.png";
 import searchIcon from "../assets/Icons/Browser-search-icone.png";
 import userAvatar from "../assets/Icons/user-avatar.png";
 
