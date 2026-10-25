@@ -15,8 +15,8 @@ const NOTES = [
       <>
         <h2>Welcome to Notes</h2>
         <p>
-          This is your note-taking app inside TahaviwOS. Pick any note from the
-          list on the left to read it here.
+          This is your notet aking app inside TahaviwOS. Pick any note from the
+          list on the left to read it here. Be confortable it's yours NOW !!
         </p>
         <blockquote>
           Everything is a window this one is draggable, closable, and stackable
@@ -30,7 +30,7 @@ const NOTES = [
     date: "10/19/2026",
     content: (
       <>
-        <h2>Personal Goals</h2>
+        <h2>Personal Goals :</h2>
         <h3>Short term</h3>
         <ul>
           <li>Finish the window manager</li>
