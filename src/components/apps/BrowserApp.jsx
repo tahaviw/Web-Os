@@ -99,13 +99,13 @@ function buildResults(query) {
       .replace(/^-|-$/g, "") || "topic";
   return [
     {
-      title: `${q} - Wikipedia`,
+      title: `${q} Wikipedia`,
       url: `https://en.wikipedia.org/wiki/${slug}`,
       site: "https://en.wikipedia.org › wiki",
       snippet: `An overview of ${q}, including background, references and related topics. Free and open content.`,
     },
     {
-      title: `${q} — Official Site`,
+      title: `${q} Official Site`,
       url: `https://www.example.com/${slug}`,
       site: `https://www.example.com › ${slug}`,
       snippet: `The official resource for ${q}. Documentation, downloads and support.`,
@@ -114,13 +114,13 @@ function buildResults(query) {
       title: `Getting started with ${q}`,
       url: `https://www.example.org/getting-started-${slug}`,
       site: "https://www.example.org › getting-started",
-      snippet: `A beginner-friendly walkthrough covering the fundamentals of ${q} in about 15 minutes.`,
+      snippet: `A beginner friendly walkthrough covering the fundamentals of ${q} in about 15 minutes.`,
     },
     {
       title: `${q} tutorial for beginners`,
       url: `https://www.example.net/tutorial-${slug}`,
       site: "https://www.example.net › tutorial",
-      snippet: `Step-by-step tutorial with runnable examples. Learn ${q} by building a small project.`,
+      snippet: `Step by step tutorial with runnable examples. Learn ${q} by building a small project.`,
     },
     {
       title: `What is ${q}? — Explained`,
